@@ -1,0 +1,139 @@
+--CREAMOS DB EN BLANCO
+CREATE DATABASE SistVBX
+
+--ABRIMOS BASE DE DATOS 
+USE SistVBX
+--CREACION DE TABLAS
+CREATE TABLE Recintos(
+IdRecinto INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+NombreRecinto NVARCHAR (50) NOT NULL, 
+Ubicacion NVARCHAR (50) NOT NULL
+)
+
+CREATE TABLE Facultad(
+CodFacultad CHAR(5) PRIMARY KEY NOT NULL, 
+NombreFacultad NVARCHAR(50) NOT NULL, 
+TiempoExist INT NOT NULL, 
+NombreAutor NVARCHAR (50) NOT NULL, 
+IdRec INT FOREIGN KEY REFERENCES Recintos(IdRecinto) NOT NULL
+)
+
+CREATE TABLE Carreras(
+CodigoCarrera CHAR(7) PRIMARY KEY NOT NULL,  
+NombreCarrera NVARCHAR(35) NOT NULL, 
+TiempoDuraccion INT NOT NULL, 
+CodFac CHAR (5) FOREIGN KEY REFERENCES Facultad(CodFacultad) NOT NULL
+)
+
+CREATE TABLE Areas(
+CodArea CHAR(5) PRIMARY KEY NOT NULL, 
+NombreArea NVARCHAR(50) NOT NULL, 
+JefeArea NVARCHAR (50) NOT NULL, 
+CodCarrera CHAR(7) FOREIGN KEY REFERENCES Carreras(CodigoCarrera) NOT NULL
+)
+
+CREATE TABLE Clientes(
+IdCliente INT IDENTITY (1,1) PRIMARY KEY NOT NULL, 
+DirCliente NVARCHAR(70) NOT NULL, 
+TelCliente CHAR (8) CHECK (TelCliente LIKE '[2|5|7|8][0-9][0-9][0-9][0-9][0-9]'),
+CodArea CHAR(5) FOREIGN KEY REFERENCES Areas (CodArea) NOT NULL
+)
+
+CREATE TABLE ClienteNatural(
+IDCN INT IDENTITY(1,1) PRIMARY KEY NOT NULL, 
+PNCN NVARCHAR (15) NOT NULL, 
+SNCN NVARCHAR (15), 
+PACN NVARCHAR (15) NOT NULL, 
+SACN NVARCHAR (15), 
+TipoC CHAR(1) CHECK (TipoC LIKE '[E|D|A]'),
+IdCliente INT FOREIGN KEY REFERENCES Clientes (IdCliente) NOT NULL
+)
+
+CREATE TABLE ClienteAdministrativo(
+IDCA INT IDENTITY(1,1) PRIMARY KEY NOT NULL, 
+NombreCAdm NVARCHAR (35) NOT NULL, 
+RespCAdm NVARCHAR (50) NOT NULL, 
+IdCliente INT FOREIGN KEY REFERENCES Clientes (IdCliente) NOT NULL
+)
+
+CREATE TABLE Distribuidor(
+IdDist CHAR(5) PRIMARY KEY NOT NULL,
+NombreDist NVARCHAR(35) NOT NULL,
+DirDist NVARCHAR(80) NOT NULL,
+TelD CHAR (8) CHECK (TelD LIKE '[2|5|7|8][0-9][0-9][0-9][0-9][0-9]'),
+)
+
+CREATE TABLE Contactos(
+IdContacto CHAR(4) PRIMARY KEY NOT NULL,
+PNC NVARCHAR(15) NOT NULL,
+SNC NVARCHAR(15),
+PAC NVARCHAR(15) NOT NULL,
+SAC NVARCHAR(15),
+DirCont NVARCHAR(70) NOT NULL,
+TelCont CHAR(8) CHECK (TelCont LIKE '[2|5|7|8][0-9][0-9][0-9][0-9][0-9]'),
+MailCont NVARCHAR(45),
+IdDist CHAR(5) FOREIGN KEY REFERENCES Distribuidor(IdDist) NOT NULL
+)
+
+CREATE TABLE Productos(
+CodProd INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+NombreProd NVARCHAR(45) NOT NULL,
+DescProd NVARCHAR(50) NOT NULL,
+PrecioProd FLOAT NOT NULL,
+ExistP INT NOT NULL,
+IdDist CHAR(5) FOREIGN KEY REFERENCES Distribuidor(IdDist) NOT NULL
+)
+
+CREATE RULE EntP
+AS
+@V>0
+
+sp_bindrule 'EntP', 'Productos.PrecioProd'
+
+CREATE RULE Ent
+AS
+@X>=0
+
+sp_bindrule 'Ent', 'Productos.ExistP'
+
+CREATE TABLE Ventas(
+IdVenta INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+FechaV DATETIME DEFAULT GETDATE() NOT NULL,
+IdCliente INT FOREIGN KEY REFERENCES Clientes(IdCliente) NOT NULL,
+TotalV FLOAT
+)
+
+CREATE TABLE DetVentas(
+IdVenta INT FOREIGN KEY REFERENCES Ventas(IdVenta) NOT NULL,
+CodProd INT FOREIGN KEY REFERENCES Productos(CodProd) NOT NULL,
+CantV INT NOT NULL,
+SubTP FLOAT,
+PRIMARY KEY(IdVenta,CodProd)
+)
+
+sp_bindrule 'EntP','DetVentas.CantV'
+sp_bindrule 'EntP','DetVentas.SubTP'
+
+CREATE TABLE Compras(
+IdCompra CHAR(4) PRIMARY KEY NOT NULL,
+FechaCompra DATE NOT NULL,
+IdDist CHAR(5) FOREIGN KEY REFERENCES Distribuidor(IdDist) NOT NULL,
+SubtC FLOAT NOT NULL,
+TotalC FLOAT
+)
+
+sp_bindrule 'Ent','Compras.SubtC'
+sp_bindrule 'Ent','Compras.TotalC'
+
+CREATE TABLE DetCompras(
+IdCompra CHAR(4) FOREIGN KEY REFERENCES Compras(IdCompra) NOT NULL,
+CodProd INT FOREIGN KEY REFERENCES Productos(CodProd) NOT NULL,
+CantC INT NOT NULL,
+PrecioC FLOAT NOT NULL,
+SubtC FLOAT,
+PRIMARY KEY(IdCompra,CodProd)
+)
+
+sp_bindrule 'EntP','DetCompras.CantC'
+sp_bindrule 'EntP','DetCompras.PrecioC'
+sp_bindrule 'EntP','DetCompras.SubtC'
